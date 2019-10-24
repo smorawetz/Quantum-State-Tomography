@@ -34,12 +34,17 @@ def basistounitary(basis, unitary_dict=dflt_unitary_dict, rotation_error=[0, 0])
     Us = unitary_vals[idcs]
 
     Us = np.array(
-        [Us[i].perturb(rotation_error[0], rotation_error[1]) for i in range(len(Us))]
+        [Us[i].perturb(rotation_error[0], rotation_error[1]) if type(Us[i]) == Rotation else Us[i] for i in range(len(Us))]
     )
-
-    U = Us[0].R
+    if type(Us[0]) == Rotation:
+        U = Us[0].R
+    else:
+        U = Us[0]
     for i in Us[1:]:
-        U = np.kron(U, i.R)
+        if type(i) == Rotation:
+            U = np.kron(U, i.R)
+        else:
+            U = np.kron(U,i)
     return U
 
 
