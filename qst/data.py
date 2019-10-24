@@ -9,6 +9,12 @@ dflt_unitary_dict = {
     "Z": Rotation([0, 0, 1], 0),
 }
 
+dflt_unitary_dict_matrix = {
+    "X": Rotation([0, 1, 0], -np.pi / 4).R,
+    "Y": Rotation([1, 0, 0], np.pi / 4).R,
+    "Z": Rotation([0, 0, 1], 0).R,
+}
+
 
 def dflt_unique_bases(N):
     XYZ = np.array(["X", "Y", "Z"])
