@@ -1,6 +1,7 @@
+import os
 import sys
 
-path = "C:/Users/Amadeus/Downloads/Quantum State Tomography"
+path = os.path.dirname(__file__)
 sys.path.append(path)
 
 import itertools as itr
@@ -13,10 +14,15 @@ i = np.complex(0, 1)
 
 rho = np.kron(np.array([[1, -i], [i, 1]]) / 2, np.array([[1, 0], [0, 0]]))
 
-unique_bases = np.array([["X","X"],["Z","X"],["X","Z"],["Y","Y"],["Z","Z"]])
+unique_bases = np.array([["X", "X"], ["Z", "X"], ["X", "Z"], ["Y", "Y"], ["Z", "Z"]])
 
 data, rho, bases, unique_bases = qst.data.create_data(
-    1000, N, rho, unique_bases, unitary_dict=qst.data.dflt_unitary_dict, rotation_error=[0.01, 0.01]
+    1000,
+    N,
+    rho,
+    unique_bases,
+    unitary_dict=qst.data.dflt_unitary_dict,
+    rotation_error=[0.01, 0.01],
 )
 
 data = qst.data.measurement_error(data, 0.01, 0.02)
