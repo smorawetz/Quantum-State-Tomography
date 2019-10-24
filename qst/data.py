@@ -7,12 +7,16 @@ dflt_unitary_dict = {
     "X": Rotation([0, 1, 0], -np.pi / 4),
     "Y": Rotation([1, 0, 0], np.pi / 4),
     "Z": Rotation([0, 0, 1], 0),
+    "B": np.array([[1, 0, 0, 1], [0, 1, 1, 0], [0, 1, -1, 0], [1, 0, 0, -1]])
+    / np.sqrt(2),
 }
 
 dflt_unitary_dict_matrix = {
     "X": Rotation([0, 1, 0], -np.pi / 4).R,
     "Y": Rotation([1, 0, 0], np.pi / 4).R,
     "Z": Rotation([0, 0, 1], 0).R,
+    "B": np.array([[1, 0, 0, 1], [0, 1, 1, 0], [0, 1, -1, 0], [1, 0, 0, -1]])
+    / np.sqrt(2),
 }
 
 
@@ -34,7 +38,12 @@ def basistounitary(basis, unitary_dict=dflt_unitary_dict, rotation_error=[0, 0])
     Us = unitary_vals[idcs]
 
     Us = np.array(
-        [Us[i].perturb(rotation_error[0], rotation_error[1]) if type(Us[i]) == Rotation else Us[i] for i in range(len(Us))]
+        [
+            Us[i].perturb(rotation_error[0], rotation_error[1])
+            if type(Us[i]) == Rotation
+            else Us[i]
+            for i in range(len(Us))
+        ]
     )
     if type(Us[0]) == Rotation:
         U = Us[0].R
@@ -44,7 +53,7 @@ def basistounitary(basis, unitary_dict=dflt_unitary_dict, rotation_error=[0, 0])
         if type(i) == Rotation:
             U = np.kron(U, i.R)
         else:
-            U = np.kron(U,i)
+            U = np.kron(U, i)
     return U
 
 
@@ -65,7 +74,7 @@ def measurement_error(data, p0, p1):
     flip = np.logical_or(
         np.logical_and(data == 0, r < p0), np.logical_and(data == 1, r < p1)
     )
-    data = np.array(np.logical_xor(data, flip),dtype=int)
+    data = np.array(np.logical_xor(data, flip), dtype=int)
     return data
 
 
