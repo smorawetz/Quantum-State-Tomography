@@ -1,7 +1,30 @@
 import itertools as itr
 import numpy as np
+import time
 from scipy import linalg
 from .operators import dagger, Rotation
+
+
+## This particular implementation is taken directly from
+## https://github.com/emerali/rand_wvfn_sampler.git
+
+def kron_mv_low_mem(x, *matrices):
+    n = [m.shape[0] for m in matrices]
+    l = np.prod(n)
+    r = 1
+    V = x.astype(complex)
+    for s in range(len(n))[::-1]:
+        l //= n[s]
+        m = matrices[s]
+        for k in range(l):
+            for i in range(r):
+                slc = slice(k*n[s]*r + i, (k+1)*n[s]*r + i, r)
+                U = V[slc]
+                V[slc] = np.dot(m, U)
+        r *= n[s]
+
+    return V
+
 
 dflt_unitary_dict = {
     "X": Rotation([0, 1, 0], -np.pi / 4),
@@ -28,7 +51,7 @@ def dflt_unique_bases(N):
     return unique_bases
 
 
-def basistounitary(basis, unitary_dict=dflt_unitary_dict, rotation_error=[0, 0]):
+def basistounitary(basis, unitary_dict=dflt_unitary_dict, rotation_error=[0.01, 0.01]):
     rotation_error = np.array(rotation_error)
 
     unitary_keys = list(unitary_dict.keys())
@@ -45,23 +68,24 @@ def basistounitary(basis, unitary_dict=dflt_unitary_dict, rotation_error=[0, 0])
             for i in range(len(Us))
         ]
     )
+    Us_ = np.copy(Us)
     if type(Us[0]) == Rotation:
-        U = Us[0].R
+        Us_[0] = Us[0].R
     else:
-        U = Us[0]
-    for i in Us[1:]:
-        if type(i) == Rotation:
-            U = np.kron(U, i.R)
+        Us_[0] = Us[0]
+    for i in range(1, len(Us[1:])+1):
+        if type(Us[i]) == Rotation:
+            Us_[i] = Us[i].R
         else:
-            U = np.kron(U, i)
-    return U
+            Us_[i] = Us[i]
+    return Us_
 
 
-def sample(N, rho, basis=None, unitary_dict=dflt_unitary_dict, rotation_error=[0, 0]):
+def sample(N, psi, basis=None, unitary_dict=dflt_unitary_dict, rotation_error=[0.01, 0.01]):
     if basis is None:
         basis = "Z" * N
-    U = basistounitary(basis, unitary_dict, rotation_error)
-    p = np.real(np.diagonal(np.einsum("ij,jk,kl->il", U, rho, dagger(U))))
+    Us = basistounitary(basis, unitary_dict, rotation_error)
+    p = np.square(np.absolute(kron_mv_low_mem(psi, *Us)))
     cum_p = np.array([np.sum(p[: i + 1]) for i in range(2 ** N)])
     sample = np.random.rand()
     sample = np.sum(cum_p < sample)
@@ -79,7 +103,7 @@ def measurement_error(data, p0, p1):
 
 
 def create_data(
-    D, N, rho, unique_bases=None, unitary_dict=dflt_unitary_dict, rotation_error=[0, 0]
+    D, N, psi, unique_bases=None, unitary_dict=dflt_unitary_dict, rotation_error=[0.01, 0.01]
 ):
     if unique_bases is None:
         unique_bases = dflt_unique_bases(N)
@@ -88,9 +112,10 @@ def create_data(
     data = []
     for i in unique_bases:
         for j in range(D):
-            bases.append(i)
-            data.append(sample(N, rho, i, unitary_dict, rotation_error))
+            bases.append(" ".join(i))
+            data.append(sample(N, psi, i, unitary_dict, rotation_error))
     bases = np.array(bases)
     data = np.array(data)
     data = data.reshape(-1, N)
+    rho = np.outer(psi, np.conj(psi))
     return data, rho, bases, unique_bases
